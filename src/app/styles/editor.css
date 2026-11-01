@@ -1,0 +1,199 @@
+/*
+ * Diff Viewer — CodeMirror 6 Editor Base Styles
+ *
+ * Bridges CM6's default shell to our design tokens.
+ * All colors trace back to global.css — no hardcoded hex values here.
+ *
+ * Strategy: minimal overrides — CM6 handles its own internal layout.
+ * We set the container, font, gutter, cursor, selection, and placeholder
+ * so the editor feels native to the surface system from first render.
+ */
+
+/* ================================================================
+   Editor Container
+   ================================================================ */
+
+.cm-editor {
+  height: 100%;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  background: var(--surface-inset);
+  color: var(--text);
+}
+
+/* Focused editor — remove default outline (we rely on the host focus ring) */
+.cm-editor.cm-focused {
+  outline: none;
+}
+
+/* ================================================================
+   Scroller
+   ================================================================ */
+
+.cm-scroller {
+  overflow-y: auto;
+  overflow-x: hidden; /* Word wrap is on by default — no horizontal content. Prevents iOS Safari elastic bounce from creating page-level horizontal scroll. */
+  height: 100%;
+  line-height: 1.6;
+  font-family: var(--font-mono);
+  overscroll-behavior: contain; /* Prevent scroll chaining to parent on both axes */
+}
+
+/* ================================================================
+   MergeView height constraint
+   ================================================================ */
+
+/* MergeView editors: absolute positioning forces .cm-editor to match its
+   parent's flex-derived size. height: 100% doesn't work here because
+   .cm-mergeViewEditor gets its height from flex (flex: 1), not from an
+   explicit height property — browsers don't treat flex-derived heights as
+   definite for percentage resolution on children.
+
+   !important required: CM6 sets position: relative !important on .cm-editor
+   via its generated style sheets. Without !important here, absolute
+   positioning can't take effect regardless of specificity. */
+
+.merge-view-container .cm-mergeViewEditor {
+  position: relative;
+}
+
+.merge-view-container .cm-editor {
+  position: absolute !important;
+  inset: 0;
+}
+
+/* ================================================================
+   Gutters
+   ================================================================ */
+
+/* !important required: CM6 generates .ͼN .cm-gutters with hardcoded
+   light-mode colors. Our single-class .cm-gutters loses the specificity
+   race, and CM6's styles load after ours in the cascade. */
+
+.cm-gutters {
+  background: var(--surface-elevated) !important;
+  border-right: 1px solid var(--border-subtle) !important;
+  color: var(--text-secondary) !important;
+  min-width: 2.5rem;
+  font-size: 0.8125rem;
+}
+
+.cm-lineNumbers .cm-gutterElement {
+  padding: 0 var(--space-2) 0 var(--space-1);
+  min-width: 2rem;
+  text-align: right;
+}
+
+/* ================================================================
+   Active line
+   ================================================================ */
+
+.cm-activeLine {
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
+.cm-activeLineGutter {
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface-elevated));
+  color: var(--text-secondary);
+}
+
+/* ================================================================
+   Selection
+   ================================================================ */
+
+/* !important required: CM6 applies selection background via inline styles */
+.cm-selectionBackground,
+.cm-focused .cm-selectionBackground {
+  background: color-mix(in srgb, var(--accent) 20%, transparent) !important;
+}
+
+/* ================================================================
+   Cursor
+   ================================================================ */
+
+/* !important required: CM6 sets cursor color via inline styles */
+.cm-cursor,
+.cm-dropCursor {
+  border-left-color: var(--text) !important;
+}
+
+/* ================================================================
+   Placeholder
+   ================================================================ */
+
+.cm-placeholder {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+/* ================================================================
+   Search panel — integrate with design system
+   ================================================================ */
+
+.cm-search.cm-panel {
+  background: var(--surface-elevated);
+  border-bottom: 1px solid var(--border);
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  color: var(--text);
+}
+
+.cm-search.cm-panel input {
+  background: var(--surface-inset);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: var(--space-1) var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+}
+
+.cm-search.cm-panel input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.cm-search.cm-panel button {
+  background: var(--surface-inset);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  padding: var(--space-1) var(--space-2);
+  cursor: pointer;
+  font-size: 0.8125rem;
+}
+
+.cm-search.cm-panel button:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.cm-search.cm-panel label {
+  color: var(--text-secondary);
+}
+
+/* ================================================================
+   Search match highlights
+   ================================================================ */
+
+.cm-searchMatch {
+  background-color: color-mix(in srgb, var(--status-warning) 25%, transparent);
+}
+
+.cm-searchMatch-selected {
+  background-color: color-mix(in srgb, var(--status-warning) 45%, transparent);
+}
+
+/* ================================================================
+   Tooltip (autocomplete, hover)
+   ================================================================ */
+
+.cm-tooltip {
+  background: var(--surface-overlay);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+}

@@ -1,0 +1,167 @@
+# Diff Viewer
+
+A text diff tool that's fast, private, and yours to deploy. No accounts, no cookies, no tracking — just paste two texts and see what changed. Share the URL, and anyone can view the diff. Deploy your own instance to Cloudflare in one click.
+
+**[Try the live demo →](https://diff.pentagram.me)**
+
+https://github.com/user-attachments/assets/859c6d7c-5cf6-4191-8df2-45838d338575
+
+> **Private by default.** No cookies. No user accounts. No personal data collected or stored. Sessions contain only the two texts you're comparing, an optional title, and timestamps. Nothing else.
+
+## ✨ Features
+
+### Diffing
+
+- **Side-by-side diff** — Line and character-level highlights with vertical alignment
+- **Live updates** — Diffs on every keystroke via CodeMirror 6 merge view
+- **Collapse unchanged** — Focus on changes by collapsing identical regions
+- **Synchronized scrolling** — Both sides scroll together in side-by-side mode
+- **Unified view** — Single-column layout for mobile or narrow viewports
+- **Word wrap** — Toggle-able, on by default, persisted across sessions
+- **Search & replace** — Cmd+F / Ctrl+F with match highlighting
+- **Swap sides** — Swap original ↔ modified with one click
+
+### Sharing
+
+- **Auto-save** — Content saves to server with debounce, URL updates automatically
+- **Shareable sessions** — Edit links (with write access) and read-only links
+- **Private sessions** — Token-gated viewing. Private sessions require the edit link to access
+- **Fork** — Read-only visitors can fork into their own editable session
+- **Link previews** — Shared links unfurl with diff stats in Slack, Discord, and social media
+- **90-day retention** — Sessions expire after 90 days of inactivity (30 days for agent-created)
+
+### Export
+
+- **Unified diff** (.diff) — Standard patch format
+- **Standalone HTML** — Self-contained file with styles
+- **PDF** — Full diff rendered via iframe (not limited to visible viewport)
+- **Clipboard** — Copy as rich text
+
+### Programmatic Access
+
+AI agents and scripts can create, update, and read sessions via pure HTTP — no SDK, no browser, no API key.
+
+```bash
+# Create a session
+curl -X PUT https://diff.pentagram.me/api/sessions/SESSION_ID \
+  -H "Content-Type: application/json" \
+  -d '{"original": "old text", "modified": "new text", "title": "My diff"}'
+
+# Read as JSON (API)
+curl https://diff.pentagram.me/api/sessions/SESSION_ID
+
+# Read as unified diff (content negotiation)
+curl -H "Accept: text/markdown" https://diff.pentagram.me/SESSION_ID
+
+# Read as unified diff (URL-friendly — works in a browser)
+# https://diff.pentagram.me/SESSION_ID?format=diff
+
+# Conditional request — returns 304 if unchanged
+curl -H 'If-None-Match: W/"1712345678901"' \
+  https://diff.pentagram.me/api/sessions/SESSION_ID
+
+# Create a private session
+curl -X PUT https://diff.pentagram.me/api/sessions/SESSION_ID \
+  -H "Content-Type: application/json" \
+  -d '{"original": "old", "modified": "new", "private": true}'
+```
+
+All session responses include `ETag`, `Last-Modified`, and `Vary: Accept` headers. Use `If-None-Match` or `If-Modified-Since` for conditional requests — the server returns 304 with an empty body when the session hasn't changed, skipping diff computation and body serialization.
+
+Creation returns `{ id, editToken, url, editUrl }`. Agent-created sessions (no Turnstile token) get 30-day retention; browser-created sessions get 90 days. Rate limiting is the only gate — no API key required.
+
+Dark mode (system + manual override), mobile responsive layout with bottom sheet menu, and keyboard shortcuts for all primary actions.
+
+## 🚀 Deploy to Cloudflare
+
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/keefetang/diff-viewer)
+
+Zero configuration required. The KV namespace is auto-created, rate limiting is enabled out of the box, and the app works immediately after deploy.
+
+## 🛠️ Local Development
+
+**Prerequisites:** Node.js >= 18, npm
+
+```bash
+git clone https://github.com/keefetang/diff-viewer.git
+cd diff-viewer
+npm install
+npm run dev
+# Opens http://localhost:8787
+```
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start local dev server |
+| `npm run build` | Build for production |
+| `npm run deploy` | Deploy to Cloudflare (generic) |
+| `npm run deploy:prod` | Deploy with custom domain (requires [setup](#-custom-domain-deploy)) |
+| `npm run cf-typegen` | Regenerate Worker type bindings |
+
+> **Note:** `npm run dev` works immediately — Wrangler creates a local KV namespace automatically. For manual production deploy (without the Deploy button), you'll need to create the KV namespace first:
+> ```bash
+> wrangler kv namespace create SESSIONS
+> ```
+> Then add the returned `id` to `wrangler.jsonc` under `kv_namespaces`.
+
+## 🌐 Custom Domain Deploy
+
+The default `npm run deploy` uses `wrangler.jsonc` and deploys to a `*.workers.dev` subdomain. To deploy with a custom domain and account-specific settings:
+
+1. Copy the template:
+   ```bash
+   cp .deploy/wrangler.jsonc.template .deploy/wrangler.jsonc
+   ```
+2. Edit `.deploy/wrangler.jsonc` — set your `account_id` and custom domain
+3. Deploy:
+   ```bash
+   npm run deploy:prod
+   ```
+
+The `.deploy/` directory is gitignored — your account ID and domain stay out of version control. See [`.deploy/wrangler.jsonc.template`](.deploy/wrangler.jsonc.template) for the full reference.
+
+## ⚙️ Configuration
+
+All configuration is optional. The app works fully without any of these — protected by rate limiting only.
+
+| Variable | Purpose | Required |
+|----------|---------|----------|
+| `CF_ANALYTICS_TOKEN` | Cloudflare Web Analytics (cookie-free) | No |
+| `TURNSTILE_SITE_KEY` | Bot protection site key | No |
+| `TURNSTILE_SECRET_KEY` | Bot protection secret key | No |
+| `CORS_ORIGIN` | Restrict API to specific domain (defaults to `*`) | No |
+
+Set secrets via CLI or the Cloudflare dashboard:
+
+```bash
+wrangler secret put TURNSTILE_SECRET_KEY
+```
+
+**Recommended for production:** Configure Turnstile for the strongest protection against bot abuse.
+
+## 🏗️ Tech Stack
+
+- **Frontend:** Svelte 5, @codemirror/merge, CodeMirror 6
+- **Backend:** Cloudflare Workers + Static Assets + KV
+- **Build:** Vite, TypeScript
+- **Bundle:** ~124kb gzipped — single request, no lazy-loaded chunks
+
+## 🔒 Security
+
+- **Edit tokens** — Random tokens protect write access per session
+- **Private sessions** — Token-gated viewing prevents unauthorized access (returns 404, not 403)
+- **Rate limiting** — All API endpoints are rate-limited (30 writes/min, 60 reads/min)
+- **Turnstile** — Optional bot protection on browser session creation. Agents bypass via rate limiting
+- **Security headers** — CSP with per-request nonces, Referrer-Policy, and other hardened defaults
+- **Input validation** — Content size limits (1 MB) and strict API contracts
+
+## 🔐 Privacy
+
+- **No cookies.** No user tracking. No personal data collected or stored.
+- **Stored per session:** Two text fields, optional title, two timestamps (created/updated), a random edit token (not tied to any user), and an optional private flag.
+- **Analytics:** Optional Cloudflare Web Analytics — cookie-free and GDPR-compliant.
+- **Note:** Cloudflare's platform provides standard request logs (including IPs) to the account owner. This app does not log them, but the platform makes them available.
+
+## 📄 License
+
+[MIT](LICENSE)
